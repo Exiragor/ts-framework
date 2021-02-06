@@ -1,9 +1,6 @@
-function component() {
-    const element = document.createElement('div');
+import { Field } from './components/field/field';
+import { registerComponents } from "./core/Component";
 
-    element.innerHTML = ['Hello', 'webpack'].join(' ');
-
-    return element;
-}
-
-document.body.appendChild(component());
+registerComponents([
+    Field
+]);
