@@ -1,6 +1,12 @@
 import { Field } from './components/field/field';
-import { registerComponents } from "./core/Component";
+import {createApp, registerComponents} from "./core/component";
 
-registerComponents([
+const components = [
     Field
-]);
+];
+
+const initialHtml = `
+    <app-field></app-field>
+`;
+
+createApp('.app', components, initialHtml);
