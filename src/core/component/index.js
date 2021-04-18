@@ -1,5 +1,6 @@
 const state = {};
-const methods = {};
+const componentsCount = {};
+let currentComponentName = null;
 
 
 export const createComponent = (name, func) => {
@@ -13,20 +14,26 @@ export const createComponent = (name, func) => {
     return [name, initComponent];
 }
 
-export const registerComponents = (componentsArr) => {
-    componentsArr.forEach(component => {
-        document.body.appendChild(component);
-    })
-};
-
 export const reactive = (initial) => {
-    const timestamp = Date.now();
-    state[timestamp] = initial;
-
-    return [timestamp, (newVal) => {
-        state[timestamp] = newVal;
-        console.log(newVal);
-    }];
+    return {
+        _value: initial,
+        _affected: [],
+        get value() {
+            return this._value;
+        },
+        set value(_val) {
+            this._value = _val;
+            this._setAffectedValue();
+        },
+        _trigger() {
+          this._setAffectedValue();
+        },
+        _setAffectedValue() {
+            this._affected.forEach((el) => {
+                el.innerHTML = this._value;
+            });
+        }
+    }
 }
 
 export const useMethod = (func) => {
@@ -36,6 +43,10 @@ export const useMethod = (func) => {
     return timestamp;
 }
 
+export const useInTemplate = (params) => {
+    state[currentComponentName] = params;
+}
+
 export const createApp = (selector, components, htmlString) => {
     const rootElem = document.querySelector(selector);
     rootElem.innerHTML = htmlString;
@@ -43,30 +54,52 @@ export const createApp = (selector, components, htmlString) => {
     components.forEach(([name, component]) => {
         const foundComponents = Array.from(document.querySelectorAll(name));
         foundComponents.forEach((componentNode) => {
-            componentNode.parentNode.insertBefore(component(), componentNode);
-            componentNode.parentNode.removeChild(componentNode);
+            insertComponent(componentNode, name, component);
         })
     });
-
-    setInitialState(rootElem);
-    setEvents(rootElem);
 }
 
-const setInitialState = (node) => {
-    Object.entries(state).forEach(([key, value]) => {
-        const items = Array.from(node.querySelectorAll(`*[al-bind="${key}"]`));
-        items.forEach((node) => {
-            node.innerHTML = value;
+const insertComponent = (node, name, component) => {
+    setCurrentComponentName(name);
+    renderComponent(name, component, node);
+}
+
+const renderComponent = (name, component, node) => {
+    const elem = component();
+    const parent = node.parentNode;
+    bindReactiveToComponent(elem);
+    bindEventsToComponent(elem);
+
+    parent.insertBefore(elem, node);
+    parent.removeChild(node);
+}
+
+const setCurrentComponentName = (name) => {
+    componentsCount[name] = componentsCount[name] ? ++componentsCount[name] : 1;
+    currentComponentName = name + componentsCount[name];
+    return currentComponentName;
+}
+
+const bindReactiveToComponent = (elem) => {
+    const binds = Array.from(elem.querySelectorAll('*[al-bind]'));
+    binds.forEach((el) => {
+        const id = el.getAttribute('al-bind');
+        state[currentComponentName][id]._affected.push(el);
+    });
+    Object.values(state[currentComponentName]).forEach((reactive) => {
+        if (reactive._trigger) {
+            reactive._trigger();
+        }
+    });
+}
+
+const events = ['click'];
+const bindEventsToComponent = (elem) => {
+    events.forEach(event => {
+        const elems = Array.from(elem.querySelectorAll(`*[al-${event}]`));
+        elems.forEach((el) => {
+            const method = el.getAttribute(`al-${event}`);
+            el.addEventListener(event, state[currentComponentName][method]);
         });
     });
-};
-
-const setEvents = (node) => {
-    const items = Array.from(node.querySelectorAll('*[al-click]'));
-    items.forEach((node) => {
-        const methodName = node.getAttribute('al-click');
-        node.addEventListener('click', () => {
-            methods[methodName]();
-        })
-    })
 }

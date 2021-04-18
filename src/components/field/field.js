@@ -1,11 +1,16 @@
-import {createComponent, reactive, useMethod} from "../../core/component";
+import {createComponent, reactive, useInTemplate, useMethod} from "../../core/component";
 
 export const Field = createComponent(
     'app-field',
     () => {
-        const [number, numberChange] = reactive(1);
-        const updateNumber = useMethod(() => {
-            numberChange(2);
+        const number = reactive(1);
+        const updateNumber = () => {
+            number.value++;
+        }
+
+        useInTemplate({
+            number,
+            updateNumber
         });
 
         return `
@@ -16,9 +21,9 @@ export const Field = createComponent(
                 </label>
             
                 <div>
-                    Значение тут: <span al-bind="${number}"></span>
+                    Значение тут: <span al-bind="number"></span>
                 </div>
-                <button al-click="${updateNumber}">Увеличить</button>
+                <button al-click="updateNumber">Увеличить</button>
             </div>
         `;
     }
